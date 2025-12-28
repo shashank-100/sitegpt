@@ -16,7 +16,7 @@ export default function Home() {
               <Link href="#features" className="text-gray-600 hover:text-gray-900">
                 Features
               </Link>
-              <Link href="#integrations" className="text-gray-600 hover:text-gray-900">
+              <Link href="/integrations" className="text-gray-600 hover:text-gray-900">
                 Integrations
               </Link>
               <Link href="#pricing" className="text-gray-600 hover:text-gray-900">

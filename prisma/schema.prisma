@@ -22,6 +22,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   chatbots      Chatbot[]
+  integrations  Integration[]
 
   @@map("users")
 }
@@ -148,4 +149,23 @@ model Lead {
   createdAt   DateTime @default(now())
 
   @@map("leads")
+}
+
+model Integration {
+  id          String   @id @default(cuid())
+  userId      String
+  chatbotId   String?
+  type        String   // 'data_source' or 'chat_platform'
+  provider    String   // 'google_drive', 'zendesk', 'slack', etc.
+  name        String
+  config      Json     @default("{}")
+  credentials Json     @default("{}")
+  status      String   @default("active") // 'active', 'inactive', 'error'
+  lastSyncAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("integrations")
 }
