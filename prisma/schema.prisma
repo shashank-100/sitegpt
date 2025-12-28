@@ -67,28 +67,35 @@ model VerificationToken {
 }
 
 model Chatbot {
-  id               String   @id @default(cuid())
-  name             String
-  description      String?
-  userId           String
-  model            String   @default("gpt-4.1-mini")
-  temperature      Float    @default(0.7)
-  systemPrompt     String?  @db.Text
-  welcomeMessage   String   @default("Hi! How can I help you today?")
-  theme            Json     @default("{\"primaryColor\":\"#0ea5e9\",\"position\":\"bottom-right\"}")
-  logo             String?
-  quickPrompts     Json     @default("[]")
-  collectLeads     Boolean  @default(false)
-  leadFields       Json     @default("{\"email\":true,\"name\":false,\"phone\":false}")
-  enableEscalation Boolean  @default(false)
-  escalationEmail  String?
-  language         String   @default("en")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  name                  String
+  description           String?
+  userId                String
+  model                 String   @default("gpt-4.1-mini")
+  temperature           Float    @default(0.7)
+  systemPrompt          String?  @db.Text
+  welcomeMessage        String   @default("Hi! How can I help you today?")
+  theme                 Json     @default("{\"primaryColor\":\"#0ea5e9\",\"position\":\"bottom-right\"}")
+  logo                  String?
+  quickPrompts          Json     @default("[]")
+  collectLeads          Boolean  @default(false)
+  leadFields            Json     @default("{\"email\":true,\"name\":false,\"phone\":false}")
+  enableEscalation      Boolean  @default(false)
+  escalationEmail       String?
+  language              String   @default("en")
+  enableBooking         Boolean  @default(false)
+  bookingCalendarType   String?  // 'google_calendar', 'calendly', 'cal_com', 'outlook'
+  bookingCalendarId     String?
+  enableQualification   Boolean  @default(false)
+  qualificationQuestions Json    @default("[]")
+  industry              String?  // 'legal', 'healthcare', 'home_services', 'financial', 'real_estate', 'b2b'
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trainingData     TrainingData[]
-  conversations    Conversation[]
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trainingData          TrainingData[]
+  conversations         Conversation[]
+  appointments          Appointment[]
 
   @@map("chatbots")
 }
@@ -139,16 +146,62 @@ model Message {
 }
 
 model Lead {
-  id          String   @id @default(cuid())
-  chatbotId   String
-  name        String?
-  email       String
-  phone       String?
-  message     String?  @db.Text
-  metadata    Json     @default("{}")
-  createdAt   DateTime @default(now())
+  id                String      @id @default(cuid())
+  chatbotId         String
+  conversationId    String?
+  name              String?
+  email             String
+  phone             String?
+  message           String?     @db.Text
+  status            String      @default("new") // 'new', 'qualified', 'contacted', 'converted', 'lost'
+  score             Int         @default(0)
+  qualificationData Json        @default("{}")
+  source            String?     // 'chat', 'form', 'api'
+  metadata          Json        @default("{}")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  appointment       Appointment?
 
   @@map("leads")
+}
+
+model Appointment {
+  id              String    @id @default(cuid())
+  chatbotId       String
+  leadId          String    @unique
+  visitorName     String
+  visitorEmail    String
+  visitorPhone    String?
+  scheduledAt     DateTime
+  duration        Int       @default(30) // minutes
+  status          String    @default("scheduled") // 'scheduled', 'confirmed', 'cancelled', 'completed', 'no_show'
+  meetingUrl      String?
+  calendarEventId String?
+  notes           String?   @db.Text
+  metadata        Json      @default("{}")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  chatbot         Chatbot   @relation(fields: [chatbotId], references: [id], onDelete: Cascade)
+  lead            Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("appointments")
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  name        String
+  industry    String   // 'legal', 'healthcare', 'home_services', etc.
+  description String?  @db.Text
+  config      Json     @default("{}")
+  prompts     Json     @default("[]")
+  questions   Json     @default("[]")
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("templates")
 }
 
 model Integration {

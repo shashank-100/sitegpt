@@ -9,6 +9,7 @@ export default function Sidebar() {
 
   const navigation = [
     { name: 'Chatbots', href: '/dashboard', icon: '🤖' },
+    { name: 'Leads', href: '/dashboard/leads', icon: '👥' },
     { name: 'Integrations', href: '/dashboard/integrations', icon: '🔗' },
     { name: 'Analytics', href: '/dashboard/analytics', icon: '📊' },
     { name: 'Settings', href: '/dashboard/settings', icon: '⚙️' },
