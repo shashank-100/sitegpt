@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateChatResponse } from '@/lib/openai'
 import { nanoid } from 'nanoid'
+import { sendNewLeadNotification } from '@/lib/email/notifications'
 
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { chatbotId, message, conversationId, visitorId, visitorData } = body
+    const { chatbotId, message, conversationId, visitorId, visitorData, qualificationAnswers } = body
 
     if (!chatbotId || !message) {
       return NextResponse.json(
@@ -20,6 +21,12 @@ export async function POST(request: Request) {
       where: { id: chatbotId },
       include: {
         trainingData: true,
+        user: {
+          select: {
+            email: true,
+            name: true,
+          },
+        },
       },
     })
 
@@ -99,9 +106,72 @@ export async function POST(request: Request) {
       },
     })
 
+    // Check if we should create/update a lead
+    let lead = null
+    let leadScore = 0
+    const shouldCollectLead = chatbot.collectLeads && visitorData?.email
+
+    if (shouldCollectLead) {
+      // Calculate lead score based on qualification answers
+      if (qualificationAnswers) {
+        const questions = (chatbot.qualificationQuestions as any[]) || []
+        questions.forEach((q: any) => {
+          if (qualificationAnswers[q.id] !== undefined) {
+            leadScore += q.score || 0
+          }
+        })
+      }
+
+      // Add score for contact info completeness
+      if (visitorData.name) leadScore += 15
+      if (visitorData.email) leadScore += 15
+      if (visitorData.phone) leadScore += 15
+
+      // Create or update lead
+      lead = await prisma.lead.create({
+        data: {
+          chatbotId,
+          conversationId: conversation.id,
+          name: visitorData.name,
+          email: visitorData.email,
+          phone: visitorData.phone,
+          message,
+          status: leadScore >= 50 ? 'qualified' : 'new',
+          score: Math.min(leadScore, 100),
+          qualificationData: qualificationAnswers || {},
+          source: 'chat',
+        },
+      })
+
+      // Send notification for qualified leads
+      if (leadScore >= 50 && chatbot.user?.email) {
+        try {
+          await sendNewLeadNotification({
+            to: chatbot.user.email,
+            ownerName: chatbot.user.name || 'User',
+            chatbotName: chatbot.name,
+            leadName: visitorData.name || 'Anonymous',
+            leadEmail: visitorData.email,
+            leadPhone: visitorData.phone,
+            leadMessage: message,
+            leadScore,
+          })
+        } catch (emailError) {
+          console.error('Error sending lead notification:', emailError)
+        }
+      }
+    }
+
+    // Determine if we should show booking UI
+    const showBooking = chatbot.enableBooking && leadScore >= 50
+
     return NextResponse.json({
       response: aiResponse,
       conversationId: conversation.id,
+      leadId: lead?.id,
+      leadScore,
+      showBooking,
+      qualificationQuestions: chatbot.enableQualification ? chatbot.qualificationQuestions : null,
     })
   } catch (error) {
     console.error('Error in chat:', error)

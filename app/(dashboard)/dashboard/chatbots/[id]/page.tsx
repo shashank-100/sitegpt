@@ -33,7 +33,7 @@ export default function ChatbotDetailPage() {
 
   const [chatbot, setChatbot] = useState<Chatbot | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'training' | 'customize' | 'embed' | 'history'>('training')
+  const [activeTab, setActiveTab] = useState<'training' | 'customize' | 'booking' | 'qualification' | 'embed' | 'history'>('training')
 
   // Training data states
   const [showAddTraining, setShowAddTraining] = useState(false)
@@ -193,6 +193,8 @@ export default function ChatbotDetailPage() {
           {[
             { id: 'training', label: 'Training Data' },
             { id: 'customize', label: 'Customize' },
+            { id: 'booking', label: 'Booking' },
+            { id: 'qualification', label: 'Qualification' },
             { id: 'embed', label: 'Embed Code' },
             { id: 'history', label: 'Chat History' },
           ].map((tab) => (
@@ -417,6 +419,176 @@ export default function ChatbotDetailPage() {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Tab */}
+      {activeTab === 'booking' && (
+        <div className="max-w-2xl">
+          <div className="bg-white rounded-lg p-6 shadow-sm space-y-6">
+            <h3 className="text-lg font-bold mb-4">Appointment Booking Settings</h3>
+
+            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+              <div>
+                <div className="font-medium text-gray-900">Enable Appointment Booking</div>
+                <div className="text-sm text-gray-600 mt-1">
+                  Allow visitors to book appointments directly through the chatbot
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={chatbot.enableBooking || false}
+                  onChange={async (e) => {
+                    await fetch(`/api/chatbots/${chatbotId}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ enableBooking: e.target.checked }),
+                    })
+                    fetchChatbot()
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Calendar Integration
+              </label>
+              <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+                <option value="">No calendar integration</option>
+                <option value="google_calendar">Google Calendar</option>
+                <option value="calendly">Calendly</option>
+                <option value="cal_com">Cal.com</option>
+                <option value="outlook">Outlook Calendar</option>
+              </select>
+              <p className="text-sm text-gray-500 mt-2">
+                Connect your calendar to automatically manage availability
+              </p>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-2">Business Hours</h4>
+              <p className="text-sm text-gray-600">
+                Default: Monday - Friday, 9:00 AM - 5:00 PM (30-minute slots)
+              </p>
+              <button className="mt-3 text-primary-600 hover:text-primary-700 text-sm font-medium">
+                Customize Business Hours →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Qualification Tab */}
+      {activeTab === 'qualification' && (
+        <div className="max-w-3xl">
+          <div className="bg-white rounded-lg p-6 shadow-sm space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-bold">Lead Qualification</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Ask questions to qualify leads and calculate lead scores
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={chatbot.enableQualification || false}
+                  onChange={async (e) => {
+                    await fetch(`/api/chatbots/${chatbotId}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ enableQualification: e.target.checked }),
+                    })
+                    fetchChatbot()
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+              </label>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-medium text-blue-900 mb-2">💡 Use Industry Templates</h4>
+              <p className="text-sm text-blue-800 mb-3">
+                Get started quickly with pre-built qualification questions for your industry
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button className="px-3 py-1 bg-white border border-blue-300 text-blue-700 rounded text-sm hover:bg-blue-50">
+                  Legal Services
+                </button>
+                <button className="px-3 py-1 bg-white border border-blue-300 text-blue-700 rounded text-sm hover:bg-blue-50">
+                  Healthcare
+                </button>
+                <button className="px-3 py-1 bg-white border border-blue-300 text-blue-700 rounded text-sm hover:bg-blue-50">
+                  Home Services
+                </button>
+                <button className="px-3 py-1 bg-white border border-blue-300 text-blue-700 rounded text-sm hover:bg-blue-50">
+                  Financial
+                </button>
+                <button className="px-3 py-1 bg-white border border-blue-300 text-blue-700 rounded text-sm hover:bg-blue-50">
+                  Real Estate
+                </button>
+                <button className="px-3 py-1 bg-white border border-blue-300 text-blue-700 rounded text-sm hover:bg-blue-50">
+                  B2B Services
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-medium text-gray-900">Qualification Questions</h4>
+                <button className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm">
+                  + Add Question
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">What's your budget range?</div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        Type: Multiple choice • Score: 20 points
+                      </div>
+                    </div>
+                    <button className="text-red-600 hover:text-red-700 text-sm">Delete</button>
+                  </div>
+                </div>
+
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">When do you need this completed?</div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        Type: Multiple choice • Score: 25 points
+                      </div>
+                    </div>
+                    <button className="text-red-600 hover:text-red-700 text-sm">Delete</button>
+                  </div>
+                </div>
+
+                <div className="border border-dashed border-gray-300 rounded-lg p-8 text-center text-gray-500">
+                  Add qualification questions to score leads automatically
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-2">Lead Scoring</h4>
+              <p className="text-sm text-gray-600">
+                Leads are scored 0-100 based on their answers. Leads with 70+ points are marked as "Hot Leads" 🔥
+              </p>
+              <ul className="text-sm text-gray-600 mt-2 space-y-1">
+                <li>• 70-100: Hot Lead (high priority follow-up)</li>
+                <li>• 50-69: Qualified (good potential)</li>
+                <li>• 0-49: New Lead (needs nurturing)</li>
+              </ul>
             </div>
           </div>
         </div>

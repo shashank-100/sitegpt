@@ -377,6 +377,128 @@
     }
   }
 
+  // Show booking UI
+  function showBookingUI(leadId) {
+    const bookingDiv = document.createElement('div');
+    bookingDiv.className = 'sitegpt-message assistant';
+    bookingDiv.innerHTML = `
+      <div class="sitegpt-message-content" style="max-width: 100%;">
+        <div style="margin-bottom: 12px;"><strong>📅 Schedule an Appointment</strong></div>
+        <div style="margin-bottom: 12px;">
+          <input type="text" id="sitegpt-booking-name" placeholder="Your name" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 8px; font-family: inherit; font-size: 14px;" />
+          <input type="email" id="sitegpt-booking-email" placeholder="Your email" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 8px; font-family: inherit; font-size: 14px;" />
+          <input type="tel" id="sitegpt-booking-phone" placeholder="Your phone (optional)" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 8px; font-family: inherit; font-size: 14px;" />
+        </div>
+        <div style="margin-bottom: 12px;">
+          <select id="sitegpt-booking-date" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 8px; font-family: inherit; font-size: 14px;">
+            <option value="">Select a date...</option>
+          </select>
+          <select id="sitegpt-booking-time" style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-family: inherit; font-size: 14px;" disabled>
+            <option value="">Select a time...</option>
+          </select>
+        </div>
+        <button id="sitegpt-book-btn" style="width: 100%; padding: 10px; background: #0ea5e9; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; font-family: inherit;" disabled>
+          Book Appointment
+        </button>
+      </div>
+    `;
+    messagesContainer.appendChild(bookingDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    // Populate dates (next 7 days)
+    const dateSelect = document.getElementById('sitegpt-booking-date');
+    const today = new Date();
+    for (let i = 1; i <= 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      const option = document.createElement('option');
+      option.value = dateStr;
+      option.textContent = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      dateSelect.appendChild(option);
+    }
+
+    // Load time slots when date is selected
+    dateSelect.addEventListener('change', async (e) => {
+      const timeSelect = document.getElementById('sitegpt-booking-time');
+      timeSelect.innerHTML = '<option value="">Loading...</option>';
+      timeSelect.disabled = true;
+
+      try {
+        const response = await fetch(`${apiUrl}/api/appointments/available-slots?chatbotId=${chatbotId}&date=${e.target.value}`);
+        const data = await response.json();
+
+        timeSelect.innerHTML = '<option value="">Select a time...</option>';
+        data.slots.filter(s => s.available).forEach(slot => {
+          const slotTime = new Date(slot.time);
+          const option = document.createElement('option');
+          option.value = slot.time;
+          option.textContent = slotTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+          timeSelect.appendChild(option);
+        });
+        timeSelect.disabled = false;
+      } catch (error) {
+        timeSelect.innerHTML = '<option value="">Error loading times</option>';
+      }
+    });
+
+    // Enable book button when form is valid
+    function validateForm() {
+      const name = document.getElementById('sitegpt-booking-name').value;
+      const email = document.getElementById('sitegpt-booking-email').value;
+      const date = document.getElementById('sitegpt-booking-date').value;
+      const time = document.getElementById('sitegpt-booking-time').value;
+      const bookBtn = document.getElementById('sitegpt-book-btn');
+      bookBtn.disabled = !(name && email && date && time);
+    }
+
+    document.getElementById('sitegpt-booking-name').addEventListener('input', validateForm);
+    document.getElementById('sitegpt-booking-email').addEventListener('input', validateForm);
+    document.getElementById('sitegpt-booking-date').addEventListener('change', validateForm);
+    document.getElementById('sitegpt-booking-time').addEventListener('change', validateForm);
+
+    // Handle booking submission
+    document.getElementById('sitegpt-book-btn').addEventListener('click', async () => {
+      const name = document.getElementById('sitegpt-booking-name').value;
+      const email = document.getElementById('sitegpt-booking-email').value;
+      const phone = document.getElementById('sitegpt-booking-phone').value;
+      const scheduledAt = document.getElementById('sitegpt-booking-time').value;
+      const bookBtn = document.getElementById('sitegpt-book-btn');
+
+      bookBtn.disabled = true;
+      bookBtn.textContent = 'Booking...';
+
+      try {
+        const response = await fetch(`${apiUrl}/api/appointments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chatbotId,
+            leadId,
+            visitorName: name,
+            visitorEmail: email,
+            visitorPhone: phone,
+            scheduledAt,
+            duration: 30,
+          }),
+        });
+
+        if (response.ok) {
+          bookingDiv.remove();
+          addMessage('assistant', '✅ Appointment booked! You\'ll receive a confirmation email shortly.');
+        } else {
+          bookBtn.disabled = false;
+          bookBtn.textContent = 'Book Appointment';
+          addMessage('assistant', 'Sorry, there was an error booking your appointment. Please try again.');
+        }
+      } catch (error) {
+        bookBtn.disabled = false;
+        bookBtn.textContent = 'Book Appointment';
+        addMessage('assistant', 'Sorry, there was an error. Please try again.');
+      }
+    });
+  }
+
   // Send message
   inputForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -420,6 +542,13 @@
 
         if (data.conversationId && !conversationId) {
           conversationId = data.conversationId;
+        }
+
+        // Show booking UI if enabled and lead is qualified
+        if (data.showBooking) {
+          setTimeout(() => {
+            showBookingUI(data.leadId);
+          }, 1000);
         }
       }
     } catch (error) {
