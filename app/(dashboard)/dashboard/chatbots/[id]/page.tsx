@@ -12,6 +12,9 @@ interface Chatbot {
   welcomeMessage: string
   theme: any
   quickPrompts: any
+  enableBooking: boolean
+  enableQualification: boolean
+  qualificationQuestions: any
   trainingData: TrainingData[]
   _count: {
     conversations: number
